@@ -4,8 +4,13 @@ const path = require('path');
 
 // Native library service
 let nativeLib = null;
+let ipcHandlersSetup = false;
 
 async function initializeNativeLibrary() {
+    if (nativeLib && nativeLib.initialized) {
+        return { initialized: true, libraryPath: nativeLib.libraryPath };
+    }
+
     try {
         const koffi = require('koffi');
         const fs = require('fs');
@@ -77,8 +82,12 @@ async function initializeNativeLibrary() {
     }
 }
 
-// IPC Handlers
+// IPC Handlers - only setup once
 function setupIpcHandlers() {
+    if (ipcHandlersSetup) {
+        return;
+    }
+
     // Handle HTTP request via native library
     ipcMain.handle('native:makeHttpRequest', async (event, requestJson) => {
         if (!nativeLib || !nativeLib.initialized) {
@@ -121,14 +130,16 @@ function setupIpcHandlers() {
             libraryPath: nativeLib.libraryPath,
         };
     });
+
+    ipcHandlersSetup = true;
 }
 
 async function createWindow() {
-    // Initialize native library first
-    await initializeNativeLibrary();
-
-    // Setup IPC handlers
+    // Setup IPC handlers first (only once)
     setupIpcHandlers();
+
+    // Initialize native library
+    await initializeNativeLibrary();
 
     const mainWindow = new BrowserWindow({
         title: 'Ababil Studio',

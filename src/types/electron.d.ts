@@ -19,5 +19,3 @@ declare global {
         ababilAPI: AbabilAPI;
     }
 }
-
-export {};
