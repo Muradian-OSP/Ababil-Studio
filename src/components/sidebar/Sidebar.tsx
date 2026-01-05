@@ -42,6 +42,8 @@ export function Sidebar({
         new Set()
     );
     const [newDialogOpen, setNewDialogOpen] = useState(false);
+    const [newCollectionDialogOpen, setNewCollectionDialogOpen] = useState(false);
+    const [newCollectionName, setNewCollectionName] = useState('');
     const [importing, setImporting] = useState(false);
     const [importError, setImportError] = useState<string | null>(null);
 
@@ -80,13 +82,18 @@ export function Sidebar({
     };
 
     const handleNewCollection = () => {
-        const name = prompt('Enter collection name:');
-        if (name && name.trim()) {
+        setNewCollectionDialogOpen(true);
+    };
+
+    const handleCreateCollection = () => {
+        if (newCollectionName.trim()) {
             const newCollection = saveCollection({
-                name: name.trim(),
+                name: newCollectionName.trim(),
                 requests: [],
             });
             setExpandedCollections((prev) => new Set(prev).add(newCollection.id));
+            setNewCollectionName('');
+            setNewCollectionDialogOpen(false);
             onNewCollection?.();
             onCollectionCreated?.();
         }
@@ -268,6 +275,48 @@ export function Sidebar({
                     </DialogHeader>
                     <DialogFooter>
                         <Button onClick={() => setNewDialogOpen(false)}>Close</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* New Collection Dialog */}
+            <Dialog open={newCollectionDialogOpen} onOpenChange={setNewCollectionDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>New Collection</DialogTitle>
+                        <DialogDescription>
+                            Enter a name for your new collection.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Input
+                            value={newCollectionName}
+                            onChange={(e) => setNewCollectionName(e.target.value)}
+                            placeholder="Collection name"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    handleCreateCollection();
+                                }
+                            }}
+                            autoFocus
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setNewCollectionDialogOpen(false);
+                                setNewCollectionName('');
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleCreateCollection}
+                            disabled={!newCollectionName.trim()}
+                        >
+                            Create
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
