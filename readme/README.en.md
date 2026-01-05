@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🚀 Ababil Desktop</h1>
+  <h1>🚀 Ababil Studio</h1>
   <p><strong>Lightning-fast API testing tool powered by Rust</strong></p>
   
   <p>
@@ -23,7 +23,7 @@
 
 ## 🌟 Overview
 
-**Ababil Desktop** is an open-source API development and testing platform designed to be faster, lighter, and more efficient than traditional tools like Postman. By leveraging Rust's performance capabilities at its core, Ababil delivers near-instant request execution while maintaining a beautiful, intuitive user interface built with modern web technologies.
+**Ababil Studio** is an open-source API development and testing platform designed to be faster, lighter, and more efficient than traditional tools like Postman. By leveraging Rust's performance capabilities at its core, Ababil delivers near-instant request execution while maintaining a beautiful, intuitive user interface built with modern web technologies.
 
 ### Why Ababil?
 
@@ -151,7 +151,7 @@ https://github.com/Muradian-OSP/Ababil-Desktop/releases
 
 ### Making Your First Request
 
-1. **Launch Ababil Desktop**
+1. **Launch Ababil Studio**
 2. **Select HTTP method** (GET, POST, etc.)
 3. **Enter the URL** of your API endpoint
 4. **Add headers, parameters, or body** as needed
