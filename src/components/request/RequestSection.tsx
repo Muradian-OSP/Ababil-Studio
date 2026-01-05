@@ -23,7 +23,7 @@ import { HTTP_METHODS } from '../../utils/constants';
 import { getMethodColor } from '../../utils/helpers';
 import { Collection } from '../../types/collection';
 import { Environment } from '../../types/environment';
-import { replaceVariablesInUrl } from '../../utils/variableReplacer';
+import { VariableUrlInput } from './VariableUrlInput';
 
 interface RequestSectionProps {
     method: string;
@@ -39,6 +39,7 @@ interface RequestSectionProps {
     onSend: () => void;
     onKeyDown: (e: React.KeyboardEvent) => void;
     onSave?: (name: string, collectionId?: string) => void;
+    onEnvironmentUpdate?: () => void;
 }
 
 export function RequestSection({
@@ -55,15 +56,11 @@ export function RequestSection({
     onSend,
     onKeyDown,
     onSave,
+    onEnvironmentUpdate,
 }: RequestSectionProps) {
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
     const [saveName, setSaveName] = useState(currentRequestName || '');
     const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
-    const [showUrlTooltip, setShowUrlTooltip] = useState(false);
-
-    // Get resolved URL for tooltip
-    const resolvedUrl = replaceVariablesInUrl(url, activeEnvironment || null);
-    const hasVariables = url.includes('{{') && url.includes('}}');
 
     const handleSave = () => {
         if (saveName.trim() && onSave) {
@@ -127,23 +124,14 @@ export function RequestSection({
                         </SelectContent>
                     </Select>
 
-                    <div className="flex-1 relative">
-                        <Input
-                            value={url}
-                            onChange={(e) => onUrlChange(e.target.value)}
-                            onKeyDown={onKeyDown}
-                            placeholder="Enter request URL..."
-                            className="font-mono text-sm"
-                            onMouseEnter={() => hasVariables && setShowUrlTooltip(true)}
-                            onMouseLeave={() => setShowUrlTooltip(false)}
-                        />
-                        {hasVariables && showUrlTooltip && resolvedUrl !== url && (
-                            <div className="absolute z-10 top-full left-0 mt-1 p-2 bg-popover border border-border rounded-md shadow-lg text-xs font-mono max-w-md break-all">
-                                <div className="text-muted-foreground mb-1">Resolved URL:</div>
-                                <div>{resolvedUrl}</div>
-                            </div>
-                        )}
-                    </div>
+                    <VariableUrlInput
+                        value={url}
+                        onChange={onUrlChange}
+                        onKeyDown={onKeyDown}
+                        placeholder="Enter request URL..."
+                        activeEnvironment={activeEnvironment || null}
+                        onEnvironmentUpdate={onEnvironmentUpdate}
+                    />
 
                     <Button onClick={onSend} disabled={loading || !url.trim()}>
                         {loading ? (

@@ -9,7 +9,11 @@ interface LeftNavProps {
 }
 
 export function LeftNav({ activeItem, onItemClick }: LeftNavProps) {
-    const navItems: Array<{ id: NavItem; label: string; icon: React.ReactNode }> = [
+    const navItems: Array<{
+        id: NavItem;
+        label: string;
+        icon: React.ReactNode;
+    }> = [
         {
             id: 'collections',
             label: 'Collections',
@@ -38,11 +42,12 @@ export function LeftNav({ activeItem, onItemClick }: LeftNavProps) {
                         onClick={() => onItemClick(item.id)}
                     >
                         {item.icon}
-                        <span className="text-[9px] leading-tight font-normal">{item.label}</span>
+                        <span className="text-[9px] leading-tight font-normal">
+                            {item.label}
+                        </span>
                     </Button>
                 ))}
             </div>
         </div>
     );
 }
-

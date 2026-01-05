@@ -113,6 +113,47 @@ export function setActiveEnvironment(id: string): boolean {
 }
 
 /**
+ * Update a variable in an environment
+ */
+export function updateVariable(
+    environmentId: string,
+    variableKey: string,
+    newValue: string
+): boolean {
+    const environments = loadEnvironments();
+    const environment = environments.find((e) => e.id === environmentId);
+    if (!environment) return false;
+
+    const variableIndex = environment.variables.findIndex(
+        (v) => v.key === variableKey
+    );
+    if (variableIndex === -1) return false;
+
+    environment.variables[variableIndex] = {
+        ...environment.variables[variableIndex],
+        value: newValue,
+    };
+
+    environment.updatedAt = Date.now();
+    localStorage.setItem(ENVIRONMENTS_KEY, JSON.stringify(environments));
+    return true;
+}
+
+/**
+ * Get variable value from active environment
+ */
+export function getVariableValue(
+    variableKey: string,
+    environment: Environment | null
+): string | null {
+    if (!environment) return null;
+    const variable = environment.variables.find(
+        (v) => v.key === variableKey && !v.disabled
+    );
+    return variable ? variable.value : null;
+}
+
+/**
  * Replace variables in text using {{variable}} syntax
  */
 export function replaceVariables(

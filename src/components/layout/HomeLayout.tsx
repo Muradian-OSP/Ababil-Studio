@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react';
-import {
-    makeSimpleRequest,
-    getNativeLibraryStatus,
-} from '../../services/httpClient';
+import { makeSimpleRequest } from '../../services/httpClient';
 import { HttpResponse } from '../../types/http';
 import {
     SavedRequest,
@@ -45,11 +42,6 @@ export function HomeLayout() {
     const [requestBody, setRequestBody] = useState('');
     const [response, setResponse] = useState<HttpResponse | null>(null);
     const [loading, setLoading] = useState(false);
-    const [libraryStatus, setLibraryStatus] = useState<{
-        initialized: boolean;
-        error?: string;
-        libraryPath?: string;
-    } | null>(null);
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [collections, setCollections] = useState<Collection[]>([]);
     const [requests, setRequests] = useState<SavedRequest[]>([]);
@@ -65,11 +57,6 @@ export function HomeLayout() {
     useEffect(() => {
         refreshData();
         refreshEnvironments();
-    }, []);
-
-    // Check native library status on mount
-    useEffect(() => {
-        checkLibraryStatus();
     }, []);
 
     // Detect dark mode
@@ -93,11 +80,6 @@ export function HomeLayout() {
         const envs = loadEnvironments();
         setEnvironments(envs);
         setActiveEnvironmentState(getActiveEnvironment());
-    };
-
-    const checkLibraryStatus = async () => {
-        const status = await getNativeLibraryStatus();
-        setLibraryStatus(status);
     };
 
     const handleEnvironmentChange = (environmentId: string) => {
@@ -252,6 +234,7 @@ export function HomeLayout() {
                         onSend={handleSend}
                         onKeyDown={handleKeyDown}
                         onSave={handleSave}
+                        onEnvironmentUpdate={refreshEnvironments}
                     />
 
                     {/* Response Section */}
