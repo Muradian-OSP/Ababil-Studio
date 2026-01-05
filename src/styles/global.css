@@ -54,7 +54,16 @@
         @apply border-border;
     }
 
+    html,
     body {
         @apply bg-background text-foreground;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    #root {
+        height: 100%;
+        width: 100%;
     }
 }

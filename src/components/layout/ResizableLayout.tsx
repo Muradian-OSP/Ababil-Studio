@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, ReactNode } from 'react';
 import { ArrowLeft01Icon, ArrowRight01Icon } from 'hugeicons-react';
 
 interface ResizableLayoutProps {
-    sidebar: ReactNode;
+    sidebar: ReactNode | null;
     mainContent: ReactNode;
     defaultSidebarWidth?: number;
     minSidebarWidth?: number;
@@ -75,8 +75,13 @@ export function ResizableLayout({
         setIsCollapsed(!isCollapsed);
     };
 
+    if (!sidebar) {
+        // No sidebar, just show main content
+        return <div className="h-full w-full overflow-hidden bg-background">{mainContent}</div>;
+    }
+
     return (
-        <div className="flex h-screen overflow-hidden relative">
+        <div className="flex h-full overflow-hidden relative">
             {/* Sidebar */}
             <div
                 ref={sidebarRef}
@@ -120,7 +125,7 @@ export function ResizableLayout({
             )}
 
             {/* Main Content */}
-            <div className="flex-1 overflow-hidden">{mainContent}</div>
+            <div className="flex-1 overflow-hidden bg-background">{mainContent}</div>
         </div>
     );
 }

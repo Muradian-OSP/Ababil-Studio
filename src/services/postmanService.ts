@@ -223,3 +223,71 @@ export async function importPostmanCollection(
     return result;
 }
 
+// Postman Environment types
+interface PostmanEnvironment {
+    id?: string;
+    name: string;
+    values?: Array<{
+        key: string;
+        value: string;
+        type?: string;
+        enabled?: boolean;
+    }>;
+    _postman_variable_scope?: string;
+    _postman_exported_at?: string;
+    _postman_exported_using?: string;
+}
+
+/**
+ * Parse Postman environment JSON using Rust library
+ */
+export async function parsePostmanEnvironmentJson(
+    jsonString: string
+): Promise<PostmanEnvironment> {
+    if (typeof window === 'undefined' || !window.ababilAPI) {
+        throw new Error('Not running in Electron environment');
+    }
+
+    try {
+        const resultJson = await window.ababilAPI.parsePostmanEnvironment(
+            jsonString
+        );
+        const result = JSON.parse(resultJson);
+
+        if (result.error) {
+            throw new Error(result.error);
+        }
+
+        return result as PostmanEnvironment;
+    } catch (error: unknown) {
+        const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error';
+        throw new Error(`Failed to parse Postman environment: ${errorMessage}`);
+    }
+}
+
+/**
+ * Import Postman environment and convert to our format
+ */
+export async function importPostmanEnvironment(
+    jsonString: string
+): Promise<import('../types/environment').Environment> {
+    const { saveEnvironment } = await import('./environmentService');
+    const postmanEnv = await parsePostmanEnvironmentJson(jsonString);
+
+    const variables = (postmanEnv.values || []).map((v) => ({
+        key: v.key,
+        value: v.value,
+        type: (v.type as 'string' | 'number' | 'boolean') || 'string',
+        disabled: !v.enabled,
+    }));
+
+    const environment = saveEnvironment({
+        name: postmanEnv.name,
+        variables,
+        isActive: false,
+    });
+
+    return environment;
+}
+

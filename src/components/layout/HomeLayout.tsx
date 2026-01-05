@@ -9,19 +9,35 @@ import {
     Collection,
     httpRequestToSavedRequest,
 } from '../../types/collection';
+import { Environment } from '../../types/environment';
 import {
     saveRequest,
     loadRequests,
     loadCollections,
 } from '../../services/storage';
-import { AppHeader } from '../header/AppHeader';
+import {
+    loadEnvironments,
+    getActiveEnvironment,
+    setActiveEnvironment,
+} from '../../services/environmentService';
+import {
+    replaceVariablesInUrl,
+    replaceVariablesInBody,
+    replaceVariablesInHeaders,
+} from '../../utils/variableReplacer';
+import { TopHeader } from '../header/TopHeader';
+import { LeftNav } from '../navigation/LeftNav';
 import { RequestSection } from '../request/RequestSection';
 import { ResponseSection } from '../response/ResponseSection';
 import { Sidebar } from '../sidebar/Sidebar';
+import { EnvironmentPage } from '../environment/EnvironmentPage';
 import { ResizableLayout } from './ResizableLayout';
 import { createSimpleRequest } from '../../types/http';
 
+type ViewType = 'collections' | 'environments' | 'settings';
+
 export function HomeLayout() {
+    const [currentView, setCurrentView] = useState<ViewType>('collections');
     const [method, setMethod] = useState('GET');
     const [url, setUrl] = useState(
         'http://localhost:6000/cloths?page=1&limit=20'
@@ -37,6 +53,9 @@ export function HomeLayout() {
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [collections, setCollections] = useState<Collection[]>([]);
     const [requests, setRequests] = useState<SavedRequest[]>([]);
+    const [environments, setEnvironments] = useState<Environment[]>([]);
+    const [activeEnvironment, setActiveEnvironmentState] =
+        useState<Environment | null>(null);
     const [activeRequestId, setActiveRequestId] = useState<
         string | undefined
     >();
@@ -45,6 +64,7 @@ export function HomeLayout() {
     // Load data on mount
     useEffect(() => {
         refreshData();
+        refreshEnvironments();
     }, []);
 
     // Check native library status on mount
@@ -69,9 +89,26 @@ export function HomeLayout() {
         setRequests(loadRequests());
     };
 
+    const refreshEnvironments = () => {
+        const envs = loadEnvironments();
+        setEnvironments(envs);
+        setActiveEnvironmentState(getActiveEnvironment());
+    };
+
     const checkLibraryStatus = async () => {
         const status = await getNativeLibraryStatus();
         setLibraryStatus(status);
+    };
+
+    const handleEnvironmentChange = (environmentId: string) => {
+        if (environmentId) {
+            setActiveEnvironment(environmentId);
+            refreshEnvironments();
+        } else {
+            // Clear active environment
+            localStorage.removeItem('ababil_active_environment');
+            refreshEnvironments();
+        }
     };
 
     const handleSend = async () => {
@@ -81,16 +118,26 @@ export function HomeLayout() {
         setResponse(null);
 
         try {
+            // Replace variables before sending
+            const resolvedUrl = replaceVariablesInUrl(url, activeEnvironment);
+            const resolvedBody = replaceVariablesInBody(
+                requestBody,
+                activeEnvironment
+            );
             const headers: Record<string, string> = {};
-            if (requestBody && ['POST', 'PUT', 'PATCH'].includes(method)) {
+            if (resolvedBody && ['POST', 'PUT', 'PATCH'].includes(method)) {
                 headers['Content-Type'] = 'application/json';
             }
+            const resolvedHeaders = replaceVariablesInHeaders(
+                headers,
+                activeEnvironment
+            );
 
             const result = await makeSimpleRequest(
                 method,
-                url,
-                headers,
-                requestBody || undefined
+                resolvedUrl,
+                resolvedHeaders,
+                resolvedBody || undefined
             );
             setResponse(result);
         } catch (error: unknown) {
@@ -149,6 +196,11 @@ export function HomeLayout() {
         setResponse(null);
     };
 
+    const handleNavClick = (view: ViewType) => {
+        setCurrentView(view);
+    };
+
+    // Sidebar content (collections/requests)
     const sidebar = (
         <Sidebar
             collections={collections}
@@ -162,44 +214,90 @@ export function HomeLayout() {
         />
     );
 
-    const mainContent = (
-        <div className="h-full overflow-y-auto bg-background p-6">
-            <div className="max-w-5xl mx-auto space-y-6">
-                {/* Header */}
-                <AppHeader libraryStatus={libraryStatus} />
+    // Main content based on current view
+    const renderMainContent = () => {
+        if (currentView === 'environments') {
+            return <EnvironmentPage />;
+        }
 
-                {/* Request Section */}
-                <RequestSection
-                    method={method}
-                    url={url}
-                    requestBody={requestBody}
-                    loading={loading}
-                    currentRequestName={currentRequestName}
-                    collections={collections}
-                    onMethodChange={setMethod}
-                    onUrlChange={setUrl}
-                    onBodyChange={setRequestBody}
-                    onSend={handleSend}
-                    onKeyDown={handleKeyDown}
-                    onSave={handleSave}
+        if (currentView === 'settings') {
+            return (
+                <div className="h-full overflow-y-auto bg-background p-6">
+                    <div className="max-w-5xl mx-auto">
+                        <h1 className="text-2xl font-bold mb-4">Settings</h1>
+                        <p className="text-muted-foreground">
+                            Settings page coming soon.
+                        </p>
+                    </div>
+                </div>
+            );
+        }
+
+        // Collections view (default)
+        return (
+            <div className="h-full overflow-y-auto bg-background p-6">
+                <div className="max-w-5xl mx-auto space-y-6">
+                    {/* Request Section */}
+                    <RequestSection
+                        method={method}
+                        url={url}
+                        requestBody={requestBody}
+                        loading={loading}
+                        currentRequestName={currentRequestName}
+                        collections={collections}
+                        activeEnvironment={activeEnvironment}
+                        onMethodChange={setMethod}
+                        onUrlChange={setUrl}
+                        onBodyChange={setRequestBody}
+                        onSend={handleSend}
+                        onKeyDown={handleKeyDown}
+                        onSave={handleSave}
+                    />
+
+                    {/* Response Section */}
+                    <ResponseSection
+                        response={response}
+                        loading={loading}
+                        isDarkMode={isDarkMode}
+                    />
+
+                    {/* Footer */}
+                    <footer className="text-center">
+                        <p className="text-xs text-muted-foreground">
+                            Powered by Rust • Built with Electron + React
+                        </p>
+                    </footer>
+                </div>
+            </div>
+        );
+    };
+
+    return (
+        <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
+            {/* Top Header */}
+            <TopHeader
+                activeEnvironment={activeEnvironment}
+                environments={environments}
+                onEnvironmentChange={handleEnvironmentChange}
+                onSettingsClick={() => handleNavClick('settings')}
+            />
+
+            {/* Main Layout */}
+            <div className="flex-1 flex overflow-hidden">
+                {/* Left Navigation */}
+                <LeftNav
+                    activeItem={currentView}
+                    onItemClick={handleNavClick}
                 />
 
-                {/* Response Section */}
-                <ResponseSection
-                    response={response}
-                    loading={loading}
-                    isDarkMode={isDarkMode}
-                />
-
-                {/* Footer */}
-                <footer className="text-center">
-                    <p className="text-xs text-muted-foreground">
-                        Powered by Rust • Built with Electron + React
-                    </p>
-                </footer>
+                {/* Resizable Layout with Sidebar and Main Content */}
+                <div className="flex-1 overflow-hidden">
+                    <ResizableLayout
+                        sidebar={currentView === 'collections' ? sidebar : null}
+                        mainContent={renderMainContent()}
+                    />
+                </div>
             </div>
         </div>
     );
-
-    return <ResizableLayout sidebar={sidebar} mainContent={mainContent} />;
 }

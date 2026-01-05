@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Add01Icon, Search01Icon, LockIcon, FileUploadIcon } from 'hugeicons-react';
+import { Add01Icon, Search01Icon, FileUploadIcon } from 'hugeicons-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import {
@@ -41,7 +41,6 @@ export function Sidebar({
     const [expandedCollections, setExpandedCollections] = useState<Set<string>>(
         new Set()
     );
-    const [newDialogOpen, setNewDialogOpen] = useState(false);
     const [newCollectionDialogOpen, setNewCollectionDialogOpen] = useState(false);
     const [newCollectionName, setNewCollectionName] = useState('');
     const [importing, setImporting] = useState(false);
@@ -145,47 +144,6 @@ export function Sidebar({
 
     return (
         <div className="h-full flex flex-col bg-card">
-            {/* Workspace Header */}
-            <div className="p-3 border-b border-border">
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                        <LockIcon className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Personal Workspace</span>
-                    </div>
-                    <div className="flex gap-1">
-                        <Button
-                            onClick={() => setNewDialogOpen(true)}
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2"
-                        >
-                            New
-                        </Button>
-                        <Button
-                            onClick={handleImport}
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2"
-                            disabled={importing}
-                        >
-                            {importing ? (
-                                'Importing...'
-                            ) : (
-                                <>
-                                    <FileUploadIcon className="w-4 h-4 mr-1" />
-                                    Import
-                                </>
-                            )}
-                        </Button>
-                    </div>
-                </div>
-                {importError && (
-                    <div className="mb-2 p-2 bg-destructive/10 text-destructive text-xs rounded">
-                        {importError}
-                    </div>
-                )}
-            </div>
-
             {/* Header */}
             <div className="p-3 border-b border-border space-y-2">
                 <div className="flex gap-2">
@@ -208,6 +166,27 @@ export function Sidebar({
                         Request
                     </Button>
                 </div>
+                <Button
+                    onClick={handleImport}
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={importing}
+                >
+                    {importing ? (
+                        'Importing...'
+                    ) : (
+                        <>
+                            <FileUploadIcon className="w-4 h-4 mr-1" />
+                            Import Collection
+                        </>
+                    )}
+                </Button>
+                {importError && (
+                    <div className="p-2 bg-destructive/10 text-destructive text-xs rounded">
+                        {importError}
+                    </div>
+                )}
                 <div className="relative">
                     <Search01Icon className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -263,21 +242,6 @@ export function Sidebar({
                     </div>
                 )}
             </div>
-
-            {/* New Dialog */}
-            <Dialog open={newDialogOpen} onOpenChange={setNewDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>New</DialogTitle>
-                        <DialogDescription>
-                            This feature is coming soon.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button onClick={() => setNewDialogOpen(false)}>Close</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
 
             {/* New Collection Dialog */}
             <Dialog open={newCollectionDialogOpen} onOpenChange={setNewCollectionDialogOpen}>

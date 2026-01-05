@@ -13,6 +13,8 @@ export interface AbabilAPI {
     getNativeLibraryStatus: () => Promise<NativeLibraryStatus>;
     parsePostmanCollection: (jsonString: string) => Promise<string>;
     selectPostmanFile: () => Promise<{ filePath: string; content: string } | { error: string } | null>;
+    parsePostmanEnvironment: (jsonString: string) => Promise<string>;
+    selectPostmanEnvironmentFile: () => Promise<{ filePath: string; content: string } | { error: string } | null>;
     platform: string;
 }
 

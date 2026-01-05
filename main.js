@@ -75,11 +75,17 @@ async function initializeNativeLibrary() {
             'str',
             ['str']
         );
+        const parsePostmanEnvironment = lib.func(
+            'parse_postman_environment',
+            'str',
+            ['str']
+        );
 
         nativeLib = {
             makeHttpRequest,
             freeString,
             parsePostmanCollection,
+            parsePostmanEnvironment,
             initialized: true,
             libraryPath: loadedPath,
         };
@@ -169,10 +175,62 @@ function setupIpcHandlers() {
         }
     );
 
+    // Parse Postman environment
+    ipcMain.handle(
+        'native:parsePostmanEnvironment',
+        async (event, jsonString) => {
+            if (
+                !nativeLib ||
+                !nativeLib.initialized ||
+                !nativeLib.parsePostmanEnvironment
+            ) {
+                return JSON.stringify({
+                    error: 'Native library not initialized',
+                });
+            }
+
+            try {
+                const result = nativeLib.parsePostmanEnvironment(jsonString);
+                return (
+                    result ||
+                    JSON.stringify({
+                        error: 'Null response from native library',
+                    })
+                );
+            } catch (error) {
+                return JSON.stringify({ error: error.message });
+            }
+        }
+    );
+
     // File picker for Postman import
     ipcMain.handle('native:selectPostmanFile', async () => {
         const result = await dialog.showOpenDialog({
             title: 'Select Postman Collection File',
+            filters: [
+                { name: 'JSON Files', extensions: ['json'] },
+                { name: 'All Files', extensions: ['*'] },
+            ],
+            properties: ['openFile'],
+        });
+
+        if (result.canceled || result.filePaths.length === 0) {
+            return null;
+        }
+
+        try {
+            const filePath = result.filePaths[0];
+            const fileContent = fs.readFileSync(filePath, 'utf-8');
+            return { filePath, content: fileContent };
+        } catch (error) {
+            return { error: error.message };
+        }
+    });
+
+    // File picker for Postman environment import
+    ipcMain.handle('native:selectPostmanEnvironmentFile', async () => {
+        const result = await dialog.showOpenDialog({
+            title: 'Select Postman Environment File',
             filters: [
                 { name: 'JSON Files', extensions: ['json'] },
                 { name: 'All Files', extensions: ['*'] },

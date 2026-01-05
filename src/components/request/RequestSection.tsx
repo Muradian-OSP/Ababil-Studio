@@ -22,6 +22,8 @@ import { Loading01Icon, MailSend01Icon, SaveEnergy01Icon } from 'hugeicons-react
 import { HTTP_METHODS } from '../../utils/constants';
 import { getMethodColor } from '../../utils/helpers';
 import { Collection } from '../../types/collection';
+import { Environment } from '../../types/environment';
+import { replaceVariablesInUrl } from '../../utils/variableReplacer';
 
 interface RequestSectionProps {
     method: string;
@@ -30,6 +32,7 @@ interface RequestSectionProps {
     loading: boolean;
     currentRequestName?: string;
     collections: Collection[];
+    activeEnvironment?: Environment | null;
     onMethodChange: (method: string) => void;
     onUrlChange: (url: string) => void;
     onBodyChange: (body: string) => void;
@@ -45,6 +48,7 @@ export function RequestSection({
     loading,
     currentRequestName,
     collections,
+    activeEnvironment,
     onMethodChange,
     onUrlChange,
     onBodyChange,
@@ -55,6 +59,11 @@ export function RequestSection({
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
     const [saveName, setSaveName] = useState(currentRequestName || '');
     const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
+    const [showUrlTooltip, setShowUrlTooltip] = useState(false);
+
+    // Get resolved URL for tooltip
+    const resolvedUrl = replaceVariablesInUrl(url, activeEnvironment || null);
+    const hasVariables = url.includes('{{') && url.includes('}}');
 
     const handleSave = () => {
         if (saveName.trim() && onSave) {
@@ -118,13 +127,23 @@ export function RequestSection({
                         </SelectContent>
                     </Select>
 
-                    <Input
-                        value={url}
-                        onChange={(e) => onUrlChange(e.target.value)}
-                        onKeyDown={onKeyDown}
-                        placeholder="Enter request URL..."
-                        className="flex-1 font-mono text-sm"
-                    />
+                    <div className="flex-1 relative">
+                        <Input
+                            value={url}
+                            onChange={(e) => onUrlChange(e.target.value)}
+                            onKeyDown={onKeyDown}
+                            placeholder="Enter request URL..."
+                            className="font-mono text-sm"
+                            onMouseEnter={() => hasVariables && setShowUrlTooltip(true)}
+                            onMouseLeave={() => setShowUrlTooltip(false)}
+                        />
+                        {hasVariables && showUrlTooltip && resolvedUrl !== url && (
+                            <div className="absolute z-10 top-full left-0 mt-1 p-2 bg-popover border border-border rounded-md shadow-lg text-xs font-mono max-w-md break-all">
+                                <div className="text-muted-foreground mb-1">Resolved URL:</div>
+                                <div>{resolvedUrl}</div>
+                            </div>
+                        )}
+                    </div>
 
                     <Button onClick={onSend} disabled={loading || !url.trim()}>
                         {loading ? (
