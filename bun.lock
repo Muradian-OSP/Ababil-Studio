@@ -16,6 +16,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "electron": "^39.2.7",
+        "koffi": "^2.15.0",
         "lucide-react": "^0.562.0",
         "react": "^19.2.3",
         "react-dom": "^19.2.3",
@@ -1513,6 +1514,8 @@
     "kleur": ["kleur@3.0.3", "", {}, "sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w=="],
 
     "klona": ["klona@2.0.6", "", {}, "sha512-dhG34DXATL5hSxJbIexCft8FChFXtmskoZYnoPWjXQuebWYCNkVeV3KkGegCK9CP1oswI/vQibS2GY7Em/sJJA=="],
+
+    "koffi": ["koffi@2.15.0", "", {}, "sha512-174BTuWK7L42Om7nDWy9YOTXj6Dkm14veuFf5yhVS5VU6GjtOI1Wjf+K16Z0JvSuZ3/NpkVzFBjE1oKbthTIEA=="],
 
     "language-subtag-registry": ["language-subtag-registry@0.3.23", "", {}, "sha512-0K65Lea881pHotoGEa5gDlMxt3pctLi2RplBb7Ezh4rRdLEOtgi7n4EwK9lamnUCkKBqaeKRVebTq6BAxSkpXQ=="],
 
