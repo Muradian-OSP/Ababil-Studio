@@ -13,7 +13,7 @@ import {
 import { CollectionItem } from './CollectionItem';
 import { RequestItem } from './RequestItem';
 import { Collection, SavedRequest } from '../../types/collection';
-import { saveCollection } from '../../services/storage';
+import { saveCollection, deleteCollection } from '../../services/storage';
 import { importPostmanCollection } from '../../services/postmanService';
 
 interface SidebarProps {
@@ -106,6 +106,19 @@ export function Sidebar({
             onNewCollection?.();
             onCollectionCreated?.();
         }
+    };
+
+    const handleDeleteCollection = (collectionId: string) => {
+        deleteCollection(collectionId);
+        // Remove from expanded collections if it was expanded
+        setExpandedCollections((prev) => {
+            const next = new Set(prev);
+            next.delete(collectionId);
+            return next;
+        });
+        // Refresh data
+        onNewCollection?.();
+        onCollectionCreated?.();
     };
 
     const handleImport = async () => {
@@ -222,6 +235,7 @@ export function Sidebar({
                         onToggle={() => toggleCollection(collection.id)}
                         onCollectionToggle={toggleCollection}
                         onRequestClick={onRequestSelect}
+                        onDelete={handleDeleteCollection}
                         activeRequestId={activeRequestId}
                     />
                 ))}

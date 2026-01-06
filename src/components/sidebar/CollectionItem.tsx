@@ -1,7 +1,23 @@
-import { Folder01Icon, Folder02Icon, ArrowRight01Icon, ArrowDown01Icon } from 'hugeicons-react';
+import { useState } from 'react';
+import {
+    Folder01Icon,
+    Folder02Icon,
+    ArrowRight01Icon,
+    ArrowDown01Icon,
+    Delete01Icon,
+} from 'hugeicons-react';
 import { Collection } from '../../types/collection';
 import { RequestItem } from './RequestItem';
 import { SavedRequest } from '../../types/collection';
+import { Button } from '../ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '../ui/dialog';
 
 interface CollectionItemProps {
     collection: Collection;
@@ -12,6 +28,7 @@ interface CollectionItemProps {
     onToggle: () => void;
     onCollectionToggle: (collectionId: string) => void;
     onRequestClick: (request: SavedRequest) => void;
+    onDelete?: (collectionId: string) => void;
     activeRequestId?: string;
 }
 
@@ -24,8 +41,11 @@ export function CollectionItem({
     onToggle,
     onCollectionToggle,
     onRequestClick,
+    onDelete,
     activeRequestId,
 }: CollectionItemProps) {
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
     const collectionRequests = requests.filter(
         (r) => r.collectionId === collection.id
     );
@@ -36,6 +56,18 @@ export function CollectionItem({
     );
 
     const totalItems = collectionRequests.length + childCollections.length;
+
+    const handleDeleteClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setDeleteDialogOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (onDelete) {
+            onDelete(collection.id);
+        }
+        setDeleteDialogOpen(false);
+    };
 
     return (
         <div className="select-none">
@@ -59,6 +91,16 @@ export function CollectionItem({
                 <span className="text-xs text-muted-foreground">
                     {totalItems}
                 </span>
+                {onDelete && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
+                        onClick={handleDeleteClick}
+                    >
+                        <Delete01Icon className="w-3.5 h-3.5" />
+                    </Button>
+                )}
             </div>
             {isExpanded && (
                 <div className="ml-6 mt-1 space-y-0.5">
@@ -74,6 +116,7 @@ export function CollectionItem({
                             onToggle={() => onCollectionToggle(childCollection.id)}
                             onCollectionToggle={onCollectionToggle}
                             onRequestClick={onRequestClick}
+                            onDelete={onDelete}
                             activeRequestId={activeRequestId}
                         />
                     ))}
@@ -96,6 +139,34 @@ export function CollectionItem({
                     )}
                 </div>
             )}
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Collection</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete "{collection.name}"?
+                            This will also delete all nested collections and requests.
+                            This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteDialogOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleConfirmDelete}
+                        >
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

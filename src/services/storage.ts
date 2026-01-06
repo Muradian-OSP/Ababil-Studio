@@ -115,19 +115,23 @@ export function updateCollection(
 
 export function deleteCollection(id: string): boolean {
     const collections = loadCollections();
-    const filtered = collections.filter((c) => c.id !== id);
-    if (filtered.length === collections.length) return false;
+    const collection = collections.find((c) => c.id === id);
+    if (!collection) return false;
 
-    // Also remove collectionId from requests
+    // Recursively delete child collections first
+    if (collection.collections && collection.collections.length > 0) {
+        collection.collections.forEach((childId) => {
+            deleteCollection(childId);
+        });
+    }
+
+    // Delete all requests in this collection (including nested ones)
     const requests = loadRequests();
-    const updatedRequests = requests.map((r) => {
-        if (r.collectionId === id) {
-            const { collectionId, ...rest } = r;
-            return rest as SavedRequest;
-        }
-        return r;
-    });
+    const updatedRequests = requests.filter((r) => r.collectionId !== id);
     localStorage.setItem(REQUESTS_KEY, JSON.stringify(updatedRequests));
+
+    // Remove this collection
+    const filtered = collections.filter((c) => c.id !== id);
     localStorage.setItem(COLLECTIONS_KEY, JSON.stringify(filtered));
     return true;
 }
