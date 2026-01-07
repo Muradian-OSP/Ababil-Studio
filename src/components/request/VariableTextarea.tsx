@@ -3,6 +3,7 @@ import { Textarea } from '../ui/textarea';
 import { Environment } from '../../types/environment';
 import { getVariableValue } from '../../services/environmentService';
 import { VariableInfoPopup } from './VariableInfoPopup';
+import { useEnvironment } from '../../contexts/EnvironmentContext';
 
 interface VariableTextareaProps {
     value: string;
@@ -32,6 +33,8 @@ export function VariableTextarea({
     activeEnvironment,
     onEnvironmentUpdate,
 }: VariableTextareaProps) {
+    // Get revision from context to force re-render on any environment change
+    const { revision } = useEnvironment();
     const [selectedVariable, setSelectedVariable] = useState<{
         key: string;
         position: { top: number; left: number };
@@ -61,33 +64,18 @@ export function VariableTextarea({
     const variables = useMemo(() => findVariables(value), [value]);
     const hasVariables = variables.length > 0;
 
-    // Memoize variable values to ensure they update when environment changes
-    const environmentVariablesKey = useMemo(() => {
-        if (!activeEnvironment) return '';
-        const envId = activeEnvironment.id || '';
-        const updatedAt = activeEnvironment.updatedAt || 0;
-        const varsKey = activeEnvironment.variables
-            ? activeEnvironment.variables
-                  .map((v) => `${v.key}:${v.value}:${v.disabled ? '1' : '0'}`)
-                  .join('|')
-            : '';
-        return `${envId}:${updatedAt}:${varsKey}`;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [
-        activeEnvironment?.id,
-        activeEnvironment?.updatedAt,
-        activeEnvironment?.variables,
-    ]);
-
+    // Memoize variable values using the revision counter from context
+    // This ensures we recalculate whenever ANY environment change happens globally
     const variableValues = useMemo(() => {
         const values: Record<string, string | null> = {};
         variables.forEach((variable) => {
-            const value = getVariableValue(variable.key, activeEnvironment);
-            values[variable.key] = value;
+            const val = getVariableValue(variable.key, activeEnvironment);
+            values[variable.key] = val;
         });
         return values;
+        // Using revision from context ensures this updates on any environment change
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [variables, activeEnvironment?.id, environmentVariablesKey]);
+    }, [variables, activeEnvironment?.id, revision]);
 
     const handleVariableClick = (
         variableKey: string,
@@ -313,4 +301,3 @@ export function VariableTextarea({
         </div>
     );
 }
-

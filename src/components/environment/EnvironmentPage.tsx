@@ -25,10 +25,7 @@ import {
 } from '../ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import {
-    Environment,
-    EnvironmentVariable,
-} from '../../types/environment';
+import { Environment, EnvironmentVariable } from '../../types/environment';
 import {
     loadEnvironments,
     saveEnvironment,
@@ -37,8 +34,10 @@ import {
     setActiveEnvironment,
 } from '../../services/environmentService';
 import { importPostmanEnvironment } from '../../services/postmanService';
+import { useEnvironment } from '../../contexts/EnvironmentContext';
 
 export function EnvironmentPage() {
+    const { refreshEnvironments: refreshGlobalEnvironments } = useEnvironment();
     const [environments, setEnvironments] = useState<Environment[]>([]);
     const [selectedEnvironment, setSelectedEnvironment] =
         useState<Environment | null>(null);
@@ -52,7 +51,9 @@ export function EnvironmentPage() {
     const [importing, setImporting] = useState(false);
     const [importError, setImportError] = useState<string | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [environmentToDelete, setEnvironmentToDelete] = useState<string | null>(null);
+    const [environmentToDelete, setEnvironmentToDelete] = useState<
+        string | null
+    >(null);
 
     useEffect(() => {
         refreshEnvironments();
@@ -61,6 +62,8 @@ export function EnvironmentPage() {
     const refreshEnvironments = () => {
         const envs = loadEnvironments();
         setEnvironments(envs);
+        // Also refresh global context so all components get the update
+        refreshGlobalEnvironments();
     };
 
     const handleCreateEnvironment = () => {
@@ -118,7 +121,10 @@ export function EnvironmentPage() {
         setVariableDialogOpen(true);
     };
 
-    const handleEditVariable = (env: Environment, variable: EnvironmentVariable) => {
+    const handleEditVariable = (
+        env: Environment,
+        variable: EnvironmentVariable
+    ) => {
         setSelectedEnvironment(env);
         setEditingVariable(variable);
         setVarKey(variable.key);
@@ -131,9 +137,15 @@ export function EnvironmentPage() {
 
         const variables = [...selectedEnvironment.variables];
         if (editingVariable) {
-            const index = variables.findIndex((v) => v.key === editingVariable.key);
+            const index = variables.findIndex(
+                (v) => v.key === editingVariable.key
+            );
             if (index !== -1) {
-                variables[index] = { ...variables[index], key: varKey.trim(), value: varValue };
+                variables[index] = {
+                    ...variables[index],
+                    key: varKey.trim(),
+                    value: varValue,
+                };
             }
         } else {
             variables.push({ key: varKey.trim(), value: varValue });
@@ -160,7 +172,8 @@ export function EnvironmentPage() {
         setImportError(null);
 
         try {
-            const fileResult = await window.ababilAPI.selectPostmanEnvironmentFile();
+            const fileResult =
+                await window.ababilAPI.selectPostmanEnvironmentFile();
             if (!fileResult || 'error' in fileResult) {
                 if (fileResult && 'error' in fileResult) {
                     setImportError(fileResult.error);
@@ -281,7 +294,9 @@ export function EnvironmentPage() {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => handleAddVariable(env)}
+                                            onClick={() =>
+                                                handleAddVariable(env)
+                                            }
                                         >
                                             <Add01Icon className="w-4 h-4 mr-1" />
                                             Add Variable
@@ -304,47 +319,52 @@ export function EnvironmentPage() {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {env.variables.map((variable) => (
-                                                    <TableRow key={variable.key}>
-                                                        <TableCell className="font-mono text-sm">
-                                                            {variable.key}
-                                                        </TableCell>
-                                                        <TableCell className="font-mono text-sm">
-                                                            {variable.value}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {variable.type || 'string'}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <div className="flex gap-1">
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    onClick={() =>
-                                                                        handleEditVariable(
-                                                                            env,
-                                                                            variable
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <Edit01Icon className="w-3 h-3" />
-                                                                </Button>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    onClick={() =>
-                                                                        handleDeleteVariable(
-                                                                            env,
-                                                                            variable.key
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <Delete01Icon className="w-3 h-3" />
-                                                                </Button>
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
+                                                {env.variables.map(
+                                                    (variable) => (
+                                                        <TableRow
+                                                            key={variable.key}
+                                                        >
+                                                            <TableCell className="font-mono text-sm">
+                                                                {variable.key}
+                                                            </TableCell>
+                                                            <TableCell className="font-mono text-sm">
+                                                                {variable.value}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {variable.type ||
+                                                                    'string'}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <div className="flex gap-1">
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() =>
+                                                                            handleEditVariable(
+                                                                                env,
+                                                                                variable
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <Edit01Icon className="w-3 h-3" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() =>
+                                                                            handleDeleteVariable(
+                                                                                env,
+                                                                                variable.key
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <Delete01Icon className="w-3 h-3" />
+                                                                    </Button>
+                                                                </div>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    )
+                                                )}
                                             </TableBody>
                                         </Table>
                                     )}
@@ -458,7 +478,8 @@ export function EnvironmentPage() {
                     <DialogHeader>
                         <DialogTitle>Delete Environment</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete this environment? This action cannot be undone.
+                            Are you sure you want to delete this environment?
+                            This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -483,4 +504,3 @@ export function EnvironmentPage() {
         </div>
     );
 }
-

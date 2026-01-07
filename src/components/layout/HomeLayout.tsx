@@ -7,7 +7,6 @@ import {
     httpRequestToSavedRequest,
 } from '../../types/collection';
 import { RequestHeader } from '../../types/http';
-import { Environment } from '../../types/environment';
 import { AuthToken } from '../../types/auth';
 import {
     saveRequest,
@@ -15,11 +14,6 @@ import {
     loadCollections,
     getCollection,
 } from '../../services/storage';
-import {
-    loadEnvironments,
-    getActiveEnvironment,
-    setActiveEnvironment,
-} from '../../services/environmentService';
 import { loadTokens } from '../../services/authTokenService';
 import {
     replaceVariablesInUrl,
@@ -29,6 +23,10 @@ import {
 } from '../../utils/variableReplacer';
 import { resolveAuth } from '../../utils/authInheritance';
 import { useTheme } from '../../contexts/ThemeContext';
+import {
+    EnvironmentProvider,
+    useEnvironment,
+} from '../../contexts/EnvironmentContext';
 import { TopHeader } from '../header/TopHeader';
 import { LeftNav } from '../navigation/LeftNav';
 import { RequestSection } from '../request/RequestSection';
@@ -41,8 +39,10 @@ import { ResizableLayout } from './ResizableLayout';
 
 type ViewType = 'collections' | 'environments' | 'authTokens' | 'settings';
 
-export function HomeLayout() {
+// Inner component that uses the environment context
+function HomeLayoutContent() {
     const { effectiveTheme } = useTheme();
+    const { activeEnvironment, refreshEnvironments } = useEnvironment();
     const [currentView, setCurrentView] = useState<ViewType>('collections');
     const [method, setMethod] = useState('GET');
     const [url, setUrl] = useState(
@@ -54,9 +54,6 @@ export function HomeLayout() {
     const [loading, setLoading] = useState(false);
     const [collections, setCollections] = useState<Collection[]>([]);
     const [requests, setRequests] = useState<SavedRequest[]>([]);
-    const [environments, setEnvironments] = useState<Environment[]>([]);
-    const [activeEnvironment, setActiveEnvironmentState] =
-        useState<Environment | null>(null);
     // Auth tokens are in-memory only (cleared on app restart like Postman)
     const [authTokens, setAuthTokens] = useState<AuthToken[]>([]);
     const [requestAuth, setRequestAuth] = useState<RequestAuth | undefined>();
@@ -69,7 +66,6 @@ export function HomeLayout() {
     // Load data on mount
     useEffect(() => {
         refreshData();
-        refreshEnvironments();
         refreshAuthTokens();
     }, []);
 
@@ -81,30 +77,6 @@ export function HomeLayout() {
     const refreshData = () => {
         setCollections(loadCollections());
         setRequests(loadRequests());
-    };
-
-    const refreshEnvironments = () => {
-        const envs = loadEnvironments();
-        setEnvironments(envs);
-        // Get fresh environment to ensure React detects the change
-        const activeEnv = getActiveEnvironment();
-        // Force update by creating a new object reference
-        if (activeEnv) {
-            setActiveEnvironmentState({ ...activeEnv });
-        } else {
-            setActiveEnvironmentState(null);
-        }
-    };
-
-    const handleEnvironmentChange = (environmentId: string) => {
-        if (environmentId) {
-            setActiveEnvironment(environmentId);
-            refreshEnvironments();
-        } else {
-            // Clear active environment
-            localStorage.removeItem('ababil_active_environment');
-            refreshEnvironments();
-        }
     };
 
     const handleSend = async () => {
@@ -382,12 +354,7 @@ export function HomeLayout() {
     return (
         <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
             {/* Top Header */}
-            <TopHeader
-                activeEnvironment={activeEnvironment}
-                environments={environments}
-                onEnvironmentChange={handleEnvironmentChange}
-                onSettingsClick={() => handleNavClick('settings')}
-            />
+            <TopHeader onSettingsClick={() => handleNavClick('settings')} />
 
             {/* Main Layout */}
             <div className="flex-1 flex overflow-hidden">
@@ -406,5 +373,14 @@ export function HomeLayout() {
                 </div>
             </div>
         </div>
+    );
+}
+
+// Main export wraps content in EnvironmentProvider
+export function HomeLayout() {
+    return (
+        <EnvironmentProvider>
+            <HomeLayoutContent />
+        </EnvironmentProvider>
     );
 }
