@@ -82,6 +82,27 @@ export function deleteEnvironment(id: string): boolean {
     return true;
 }
 
+// Delete all environments linked to a specific collection
+export function deleteEnvironmentsByCollectionId(collectionId: string): number {
+    const environments = loadEnvironments();
+    const toDelete = environments.filter(
+        (e) => e.collectionId === collectionId
+    );
+    if (toDelete.length === 0) return 0;
+
+    // Clear active if any of the deleted ones were active
+    const activeId = localStorage.getItem(ACTIVE_ENVIRONMENT_KEY);
+    if (activeId && toDelete.some((e) => e.id === activeId)) {
+        localStorage.removeItem(ACTIVE_ENVIRONMENT_KEY);
+    }
+
+    const filtered = environments.filter(
+        (e) => e.collectionId !== collectionId
+    );
+    localStorage.setItem(ENVIRONMENTS_KEY, JSON.stringify(filtered));
+    return toDelete.length;
+}
+
 export function getEnvironment(id: string): Environment | null {
     const environments = loadEnvironments();
     return environments.find((e) => e.id === id) || null;
@@ -185,10 +206,15 @@ export function replaceVariables(
 
     // Second pass: replace all occurrences of each variable
     replacements.forEach((value, varName) => {
-        const regex = new RegExp(`\\{\\{\\s*${varName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\}\\}`, 'g');
+        const regex = new RegExp(
+            `\\{\\{\\s*${varName.replace(
+                /[.*+?^${}()|[\]\\]/g,
+                '\\$&'
+            )}\\s*\\}\\}`,
+            'g'
+        );
         result = result.replace(regex, value);
     });
 
     return result;
 }
-

@@ -10,7 +10,7 @@ export interface Environment {
     name: string;
     variables: EnvironmentVariable[];
     isActive: boolean;
+    collectionId?: string; // Link to parent collection for cleanup on delete
     createdAt: number;
     updatedAt: number;
 }
-

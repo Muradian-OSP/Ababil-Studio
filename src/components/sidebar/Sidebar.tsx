@@ -14,6 +14,7 @@ import { CollectionItem } from './CollectionItem';
 import { RequestItem } from './RequestItem';
 import { Collection, SavedRequest } from '../../types/collection';
 import { saveCollection, deleteCollection } from '../../services/storage';
+import { deleteEnvironmentsByCollectionId } from '../../services/environmentService';
 import { importPostmanCollection } from '../../services/postmanService';
 
 interface SidebarProps {
@@ -41,7 +42,8 @@ export function Sidebar({
     const [expandedCollections, setExpandedCollections] = useState<Set<string>>(
         new Set()
     );
-    const [newCollectionDialogOpen, setNewCollectionDialogOpen] = useState(false);
+    const [newCollectionDialogOpen, setNewCollectionDialogOpen] =
+        useState(false);
     const [newCollectionName, setNewCollectionName] = useState('');
     const [importing, setImporting] = useState(false);
     const [importError, setImportError] = useState<string | null>(null);
@@ -100,7 +102,9 @@ export function Sidebar({
                 name: newCollectionName.trim(),
                 requests: [],
             });
-            setExpandedCollections((prev) => new Set(prev).add(newCollection.id));
+            setExpandedCollections((prev) =>
+                new Set(prev).add(newCollection.id)
+            );
             setNewCollectionName('');
             setNewCollectionDialogOpen(false);
             onNewCollection?.();
@@ -110,6 +114,8 @@ export function Sidebar({
 
     const handleDeleteCollection = (collectionId: string) => {
         deleteCollection(collectionId);
+        // Also delete any environments linked to this collection
+        deleteEnvironmentsByCollectionId(collectionId);
         // Remove from expanded collections if it was expanded
         setExpandedCollections((prev) => {
             const next = new Set(prev);
@@ -119,6 +125,8 @@ export function Sidebar({
         // Refresh data
         onNewCollection?.();
         onCollectionCreated?.();
+        // Trigger import complete to refresh environments
+        onImportComplete?.();
     };
 
     const handleImport = async () => {
@@ -157,7 +165,9 @@ export function Sidebar({
             // Show success message if environment was imported
             if (result.environment) {
                 // Environment is automatically saved, just refresh
-                console.log(`Environment "${result.environment.name}" imported successfully`);
+                console.log(
+                    `Environment "${result.environment.name}" imported successfully`
+                );
             }
 
             // Refresh parent (this will also refresh environments)
@@ -277,7 +287,10 @@ export function Sidebar({
             </div>
 
             {/* New Collection Dialog */}
-            <Dialog open={newCollectionDialogOpen} onOpenChange={setNewCollectionDialogOpen}>
+            <Dialog
+                open={newCollectionDialogOpen}
+                onOpenChange={setNewCollectionDialogOpen}
+            >
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>New Collection</DialogTitle>
@@ -288,7 +301,9 @@ export function Sidebar({
                     <div className="py-4">
                         <Input
                             value={newCollectionName}
-                            onChange={(e) => setNewCollectionName(e.target.value)}
+                            onChange={(e) =>
+                                setNewCollectionName(e.target.value)
+                            }
                             placeholder="Collection name"
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
@@ -320,4 +335,3 @@ export function Sidebar({
         </div>
     );
 }
-

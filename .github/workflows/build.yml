@@ -15,42 +15,9 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: '18'
-                  cache: 'npm'
-
             - name: Setup Rust
               uses: dtolnay/rust-toolchain@stable
 
             - name: Build Rust library
               working-directory: ./core
               run: cargo build --release
-
-            - name: Copy Rust library
-              shell: bash
-              run: |
-                  mkdir -p services
-                  if [ "${{ matrix.os }}" == "macos-latest" ]; then
-                    cp core/target/release/libababil_core.dylib services/libababil_core.dylib
-                  elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-                    cp core/target/release/libababil_core.so services/libababil_core.so
-                  else
-                    copy core\target\release\ababil_core.dll services\ababil_core.dll
-                  fi
-
-            - name: Install dependencies
-              run: npm ci
-
-            - name: Build React app
-              run: npm run build
-
-            - name: Build Electron app
-              run: npm run electron:build
-
-            - name: Upload artifacts
-              uses: actions/upload-artifact@v4
-              with:
-                  name: dist-${{ matrix.os }}
-                  path: dist/**

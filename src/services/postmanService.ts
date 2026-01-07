@@ -1,5 +1,10 @@
 import { Collection, SavedRequest } from '../types/collection';
-import { saveCollection, saveRequest, updateCollection, getCollection } from './storage';
+import {
+    saveCollection,
+    saveRequest,
+    updateCollection,
+    getCollection,
+} from './storage';
 import { httpRequestToSavedRequest } from '../types/collection';
 
 // Postman Collection types (matching Rust structs)
@@ -104,12 +109,18 @@ function convertPostmanRequestToHttpRequest(
                 .map((q) => `${q.key}=${encodeURIComponent(q.value || '')}`)
                 .join('&');
 
-            const constructedUrl = `${protocol}://${host}${path ? '/' + path : ''}${query ? '?' + query : ''}`;
+            const constructedUrl = `${protocol}://${host}${
+                path ? '/' + path : ''
+            }${query ? '?' + query : ''}`;
             url = { raw: constructedUrl };
         }
 
         // Also include structured parts if available
-        if (postmanRequest.url.protocol || postmanRequest.url.host || postmanRequest.url.path) {
+        if (
+            postmanRequest.url.protocol ||
+            postmanRequest.url.host ||
+            postmanRequest.url.path
+        ) {
             url = {
                 ...url,
                 protocol: postmanRequest.url.protocol,
@@ -167,7 +178,9 @@ function convertPostmanItems(
     for (const item of items) {
         if (item.request) {
             // This is a request
-            const httpRequest = convertPostmanRequestToHttpRequest(item.request);
+            const httpRequest = convertPostmanRequestToHttpRequest(
+                item.request
+            );
             const savedRequestData = httpRequestToSavedRequest(
                 httpRequest,
                 item.name,
@@ -193,7 +206,10 @@ function convertPostmanItems(
             // Update the collection with child IDs
             updateCollection(collection.id, {
                 requests: childRequestIds,
-                collections: childCollectionIds.length > 0 ? childCollectionIds : undefined,
+                collections:
+                    childCollectionIds.length > 0
+                        ? childCollectionIds
+                        : undefined,
             });
 
             // Get updated collection
@@ -248,23 +264,29 @@ export async function importPostmanCollection(
     const updatedParent = getCollection(parentCollection.id);
 
     // Import collection-level variables as an environment if they exist
-    let importedEnvironment: import('../types/environment').Environment | undefined;
+    let importedEnvironment:
+        | import('../types/environment').Environment
+        | undefined;
     if (postmanCollection.variable && postmanCollection.variable.length > 0) {
         const { saveEnvironment } = await import('./environmentService');
-        const collectionName = postmanCollection.info.name || 'Imported Collection';
-        
-        const variables = postmanCollection.variable.map((v: any) => ({
-            key: v.key || '',
-            value: v.value || '',
-            type: (v.type as 'string' | 'number' | 'boolean') || 'string',
-            disabled: v.disabled === true,
-        })).filter((v: any) => v.key); // Filter out variables without keys
+        const collectionName =
+            postmanCollection.info.name || 'Imported Collection';
+
+        const variables = postmanCollection.variable
+            .map((v: any) => ({
+                key: v.key || '',
+                value: v.value || '',
+                type: (v.type as 'string' | 'number' | 'boolean') || 'string',
+                disabled: v.disabled === true,
+            }))
+            .filter((v: any) => v.key); // Filter out variables without keys
 
         if (variables.length > 0) {
             importedEnvironment = saveEnvironment({
                 name: `${collectionName} - Variables`,
                 variables,
                 isActive: false,
+                collectionId: parentCollection.id, // Link to parent collection
             });
         }
     }
@@ -346,4 +368,3 @@ export async function importPostmanEnvironment(
 
     return environment;
 }
-
