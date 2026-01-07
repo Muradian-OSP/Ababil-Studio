@@ -46,7 +46,7 @@ export function HomeLayout() {
     const [currentView, setCurrentView] = useState<ViewType>('collections');
     const [method, setMethod] = useState('GET');
     const [url, setUrl] = useState(
-        'http://localhost:6000/cloths?page=1&limit=20'
+        'https://jsonplaceholder.typicode.com/posts/1/comments'
     );
     const [requestBody, setRequestBody] = useState('');
     const [headers, setHeaders] = useState<RequestHeader[]>([]);

@@ -13,7 +13,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '../ui/dialog';
-import { Loading01Icon, Key01Icon } from 'hugeicons-react';
+import { Loading01Icon, Key01Icon, Maximize01Icon } from 'hugeicons-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import {
     vscDarkPlus,
@@ -46,6 +46,7 @@ export function ResponseSection({
     onTokensExtracted,
 }: ResponseSectionProps) {
     const [extractDialogOpen, setExtractDialogOpen] = useState(false);
+    const [expandDialogOpen, setExpandDialogOpen] = useState(false);
     const [extractedTokens, setExtractedTokens] = useState<
         Array<{
             name: string;
@@ -245,28 +246,41 @@ export function ResponseSection({
                                 </TabsTrigger>
                             </TabsList>
                             <TabsContent value="body">
-                                <div className="mt-4 rounded-lg max-h-[400px] overflow-auto border border-border">
-                                    <SyntaxHighlighter
-                                        language={detectLanguage(response.body)}
-                                        style={
-                                            isDarkMode ? vscDarkPlus : oneLight
-                                        }
-                                        customStyle={{
-                                            margin: 0,
-                                            padding: '1rem',
-                                            borderRadius: '0.5rem',
-                                            background: '#000000',
-                                            fontSize: '0.875rem',
-                                        }}
-                                        codeTagProps={{
-                                            style: {
-                                                fontFamily:
-                                                    'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
-                                            },
-                                        }}
-                                    >
-                                        {formatBody(response.body)}
-                                    </SyntaxHighlighter>
+                                <div className="mt-4 relative">
+                                    <div className="absolute top-2 right-2 z-10">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setExpandDialogOpen(true)}
+                                            className="bg-background/80 backdrop-blur-sm"
+                                        >
+                                            <Maximize01Icon className="w-4 h-4 mr-2" />
+                                            Expand
+                                        </Button>
+                                    </div>
+                                    <div className="rounded-lg max-h-[400px] overflow-auto border border-border">
+                                        <SyntaxHighlighter
+                                            language={detectLanguage(response.body)}
+                                            style={
+                                                isDarkMode ? vscDarkPlus : oneLight
+                                            }
+                                            customStyle={{
+                                                margin: 0,
+                                                padding: '1rem',
+                                                borderRadius: '0.5rem',
+                                                background: '#000000',
+                                                fontSize: '0.875rem',
+                                            }}
+                                            codeTagProps={{
+                                                style: {
+                                                    fontFamily:
+                                                        'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+                                                },
+                                            }}
+                                        >
+                                            {formatBody(response.body)}
+                                        </SyntaxHighlighter>
+                                    </div>
                                 </div>
                             </TabsContent>
                             <TabsContent value="headers">
@@ -431,6 +445,48 @@ export function ResponseSection({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Fullscreen Response Body Dialog */}
+            {response && (
+                <Dialog
+                    open={expandDialogOpen}
+                    onOpenChange={setExpandDialogOpen}
+                >
+                    <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full flex flex-col p-0">
+                        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+                            <DialogTitle>Response Body</DialogTitle>
+                            <DialogDescription>
+                                Full view of the response body
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex-1 overflow-auto px-6 py-4">
+                            <div className="rounded-lg border border-border">
+                                <SyntaxHighlighter
+                                    language={detectLanguage(response.body)}
+                                    style={
+                                        isDarkMode ? vscDarkPlus : oneLight
+                                    }
+                                    customStyle={{
+                                        margin: 0,
+                                        padding: '1rem',
+                                        borderRadius: '0.5rem',
+                                        background: '#000000',
+                                        fontSize: '0.875rem',
+                                    }}
+                                    codeTagProps={{
+                                        style: {
+                                            fontFamily:
+                                                'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+                                        },
+                                    }}
+                                >
+                                    {formatBody(response.body)}
+                                </SyntaxHighlighter>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
         </>
     );
 }
