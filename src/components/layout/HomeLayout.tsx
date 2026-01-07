@@ -1,18 +1,17 @@
 import { useState, useEffect } from 'react';
 import { makeHttpRequest } from '../../services/httpClient';
-import { HttpResponse, RequestAuth, HttpRequest } from '../../types/http';
+import { HttpResponse, HttpRequest } from '../../types/http';
 import {
     SavedRequest,
     Collection,
     httpRequestToSavedRequest,
 } from '../../types/collection';
-import { RequestHeader } from '../../types/http';
+
 import { AuthToken } from '../../types/auth';
 import {
     saveRequest,
     loadRequests,
     loadCollections,
-    getCollection,
 } from '../../services/storage';
 import { loadTokens } from '../../services/authTokenService';
 import {
@@ -21,12 +20,13 @@ import {
     replaceVariablesInHeaders,
     replaceVariablesInAuth,
 } from '../../utils/variableReplacer';
-import { resolveAuth } from '../../utils/authInheritance';
+
 import { useTheme } from '../../contexts/ThemeContext';
 import {
     EnvironmentProvider,
     useEnvironment,
 } from '../../contexts/EnvironmentContext';
+import { TabProvider, useTabContext } from '../../contexts/TabContext';
 import { TopHeader } from '../header/TopHeader';
 import { LeftNav } from '../navigation/LeftNav';
 import { RequestSection } from '../request/RequestSection';
@@ -36,32 +36,33 @@ import { EnvironmentPage } from '../environment/EnvironmentPage';
 import { SettingsPage } from '../settings/SettingsPage';
 import { AuthTokensPage } from '../auth/AuthTokensPage';
 import { ResizableLayout } from './ResizableLayout';
+import { RequestTabsBar } from '../tabs/RequestTabsBar';
 
 type ViewType = 'collections' | 'environments' | 'authTokens' | 'settings';
 
-// Inner component that uses the environment context
+// Inner component that uses the environment context and tab context
 function HomeLayoutContent() {
     const { effectiveTheme } = useTheme();
     const { activeEnvironment, refreshEnvironments } = useEnvironment();
+    const {
+        activeTab,
+        openNewTab,
+        openRequestInTab,
+        setMethod,
+        setUrl,
+        setBody,
+        setHeaders,
+        setAuth,
+        setResponse,
+        markAsSaved,
+    } = useTabContext();
+
     const [currentView, setCurrentView] = useState<ViewType>('collections');
-    const [method, setMethod] = useState('GET');
-    const [url, setUrl] = useState(
-        'https://jsonplaceholder.typicode.com/posts/1/comments'
-    );
-    const [requestBody, setRequestBody] = useState('');
-    const [headers, setHeaders] = useState<RequestHeader[]>([]);
-    const [response, setResponse] = useState<HttpResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [collections, setCollections] = useState<Collection[]>([]);
     const [requests, setRequests] = useState<SavedRequest[]>([]);
     // Auth tokens are in-memory only (cleared on app restart like Postman)
     const [authTokens, setAuthTokens] = useState<AuthToken[]>([]);
-    const [requestAuth, setRequestAuth] = useState<RequestAuth | undefined>();
-    const [activeRequestId, setActiveRequestId] = useState<
-        string | undefined
-    >();
-    const [currentRequestName, setCurrentRequestName] = useState<string>('');
-    const [testScript, setTestScript] = useState<string | undefined>();
 
     // Load data on mount
     useEffect(() => {
@@ -80,7 +81,7 @@ function HomeLayoutContent() {
     };
 
     const handleSend = async () => {
-        if (!url.trim()) return;
+        if (!activeTab || !activeTab.url.trim()) return;
 
         setLoading(true);
         setResponse(null);
@@ -88,18 +89,18 @@ function HomeLayoutContent() {
         try {
             // Replace variables before sending (including auth tokens)
             const resolvedUrl = replaceVariablesInUrl(
-                url,
+                activeTab.url,
                 activeEnvironment,
                 authTokens
             );
             const resolvedBody = replaceVariablesInBody(
-                requestBody,
+                activeTab.body,
                 activeEnvironment,
                 authTokens
             );
             // Convert headers array to Record, filtering out disabled and empty headers
             const headersRecord: Record<string, string> = {};
-            headers
+            activeTab.headers
                 .filter((h) => !h.disabled && h.key.trim())
                 .forEach((h) => {
                     headersRecord[h.key] = h.value;
@@ -110,7 +111,7 @@ function HomeLayoutContent() {
             if (
                 !headersRecord['Authorization'] &&
                 !headersRecord['authorization'] &&
-                !requestAuth
+                !activeTab.auth
             ) {
                 // Check for common token names in priority order
                 const commonTokenNames = [
@@ -139,7 +140,10 @@ function HomeLayoutContent() {
             }
 
             // Add Content-Type header for POST/PUT/PATCH if body exists
-            if (resolvedBody && ['POST', 'PUT', 'PATCH'].includes(method)) {
+            if (
+                resolvedBody &&
+                ['POST', 'PUT', 'PATCH'].includes(activeTab.method)
+            ) {
                 if (!headersRecord['Content-Type']) {
                     headersRecord['Content-Type'] = 'application/json';
                 }
@@ -152,9 +156,9 @@ function HomeLayoutContent() {
             );
 
             // Replace variables in auth object if present
-            const resolvedAuth = requestAuth
+            const resolvedAuth = activeTab.auth
                 ? replaceVariablesInAuth(
-                      requestAuth,
+                      activeTab.auth,
                       activeEnvironment,
                       authTokens
                   )
@@ -162,7 +166,7 @@ function HomeLayoutContent() {
 
             // Build full HttpRequest with auth
             const request: HttpRequest = {
-                method,
+                method: activeTab.method,
                 url: { raw: resolvedUrl },
                 header: Object.entries(resolvedHeaders).map(([key, value]) => ({
                     key,
@@ -172,11 +176,16 @@ function HomeLayoutContent() {
                     ? { mode: 'raw', raw: resolvedBody }
                     : undefined,
                 auth: resolvedAuth,
-                testScript,
+                testScript: activeTab.testScript,
             };
 
             const result = await makeHttpRequest(request);
-            setResponse(result);
+            setResponse({
+                status_code: result.status_code,
+                headers: result.headers.map(([key, value]) => ({ key, value })),
+                body: result.body,
+                duration_ms: result.duration_ms,
+            });
         } catch (error: unknown) {
             const errorMessage =
                 error instanceof Error ? error.message : 'Unknown error';
@@ -198,56 +207,33 @@ function HomeLayoutContent() {
     };
 
     const handleRequestSelect = (request: SavedRequest) => {
-        setActiveRequestId(request.id);
-        setCurrentRequestName(request.name);
-        setMethod(request.method);
-        setUrl(request.url);
-        setRequestBody(request.body || '');
-        // Convert headers from Record to RequestHeader array
-        if (request.headers) {
-            setHeaders(
-                Object.entries(request.headers).map(([key, value]) => ({
-                    key,
-                    value,
-                    disabled: false,
-                }))
-            );
-        } else {
-            setHeaders([]);
-        }
-
-        // Resolve auth with inheritance
-        let resolvedAuth = request.auth;
-        if (request.collectionId) {
-            const collection = getCollection(request.collectionId);
-            if (collection) {
-                resolvedAuth = resolveAuth(request.auth, collection.auth);
-            }
-        }
-        setRequestAuth(resolvedAuth);
-        setTestScript(request.testScript);
-        setResponse(null);
+        // Open request in tab (or focus if already open)
+        openRequestInTab(request);
     };
 
     const handleSave = (name: string, collectionId?: string) => {
+        if (!activeTab) return;
+
         // Convert headers array to Record for saving
         const headersRecord: Record<string, string> = {};
-        headers
+        activeTab.headers
             .filter((h) => !h.disabled && h.key.trim())
             .forEach((h) => {
                 headersRecord[h.key] = h.value;
             });
 
         const request: HttpRequest = {
-            method,
-            url: { raw: url },
+            method: activeTab.method,
+            url: { raw: activeTab.url },
             header: Object.entries(headersRecord).map(([key, value]) => ({
                 key,
                 value,
             })),
-            body: requestBody ? { mode: 'raw', raw: requestBody } : undefined,
-            auth: requestAuth,
-            testScript,
+            body: activeTab.body
+                ? { mode: 'raw', raw: activeTab.body }
+                : undefined,
+            auth: activeTab.auth,
+            testScript: activeTab.testScript,
         };
         const savedRequestData = httpRequestToSavedRequest(
             request,
@@ -255,21 +241,12 @@ function HomeLayoutContent() {
             collectionId
         );
         const saved = saveRequest(savedRequestData);
-        setActiveRequestId(saved.id);
-        setCurrentRequestName(saved.name);
+        markAsSaved(saved.id, saved.name);
         refreshData();
     };
 
     const handleNewRequest = () => {
-        setActiveRequestId(undefined);
-        setCurrentRequestName('');
-        setMethod('GET');
-        setUrl('');
-        setRequestBody('');
-        setHeaders([]);
-        setRequestAuth(undefined);
-        setTestScript(undefined);
-        setResponse(null);
+        openNewTab();
     };
 
     const handleNavClick = (view: ViewType) => {
@@ -282,7 +259,7 @@ function HomeLayoutContent() {
             collections={collections}
             requests={requests}
             onRequestSelect={handleRequestSelect}
-            activeRequestId={activeRequestId}
+            activeRequestId={activeTab?.savedRequestId}
             onNewCollection={refreshData}
             onNewRequest={handleNewRequest}
             onCollectionCreated={refreshData}
@@ -292,6 +269,18 @@ function HomeLayoutContent() {
             }}
         />
     );
+
+    // Convert tab response format to HttpResponse format for ResponseSection
+    const httpResponse: HttpResponse | null = activeTab?.response
+        ? {
+              status_code: activeTab.response.status_code,
+              headers: activeTab.response.headers.map(
+                  (h) => [h.key, h.value] as [string, string]
+              ),
+              body: activeTab.response.body,
+              duration_ms: activeTab.response.duration_ms,
+          }
+        : null;
 
     // Main content based on current view
     const renderMainContent = () => {
@@ -309,45 +298,52 @@ function HomeLayoutContent() {
 
         // Collections view (default)
         return (
-            <div className="h-full overflow-y-auto bg-background">
-                <div className="w-full px-6 py-6 space-y-6">
-                    {/* Request Section */}
-                    <RequestSection
-                        method={method}
-                        url={url}
-                        requestBody={requestBody}
-                        headers={headers}
-                        loading={loading}
-                        currentRequestName={currentRequestName}
-                        collections={collections}
-                        activeEnvironment={activeEnvironment}
-                        requestAuth={requestAuth}
-                        onMethodChange={setMethod}
-                        onUrlChange={setUrl}
-                        onBodyChange={setRequestBody}
-                        onHeadersChange={setHeaders}
-                        onAuthChange={setRequestAuth}
-                        onSend={handleSend}
-                        onKeyDown={handleKeyDown}
-                        onSave={handleSave}
-                        onEnvironmentUpdate={refreshEnvironments}
-                    />
+            <div className="h-full flex flex-col bg-background">
+                {/* Request Tabs Bar */}
+                <RequestTabsBar />
 
-                    {/* Response Section */}
-                    <ResponseSection
-                        response={response}
-                        loading={loading}
-                        isDarkMode={effectiveTheme === 'dark'}
-                        testScript={testScript}
-                        onTokensExtracted={refreshAuthTokens}
-                    />
+                <div className="flex-1 overflow-y-auto">
+                    <div className="w-full px-6 py-6 space-y-6">
+                        {/* Request Section */}
+                        {activeTab && (
+                            <RequestSection
+                                method={activeTab.method}
+                                url={activeTab.url}
+                                requestBody={activeTab.body}
+                                headers={activeTab.headers}
+                                loading={loading}
+                                currentRequestName={activeTab.name}
+                                collections={collections}
+                                activeEnvironment={activeEnvironment}
+                                requestAuth={activeTab.auth}
+                                onMethodChange={setMethod}
+                                onUrlChange={setUrl}
+                                onBodyChange={setBody}
+                                onHeadersChange={setHeaders}
+                                onAuthChange={setAuth}
+                                onSend={handleSend}
+                                onKeyDown={handleKeyDown}
+                                onSave={handleSave}
+                                onEnvironmentUpdate={refreshEnvironments}
+                            />
+                        )}
 
-                    {/* Footer */}
-                    <footer className="text-center">
-                        <p className="text-xs text-muted-foreground">
-                            Powered by Rust • Built with Electron + React
-                        </p>
-                    </footer>
+                        {/* Response Section */}
+                        <ResponseSection
+                            response={httpResponse}
+                            loading={loading}
+                            isDarkMode={effectiveTheme === 'dark'}
+                            testScript={activeTab?.testScript}
+                            onTokensExtracted={refreshAuthTokens}
+                        />
+
+                        {/* Footer */}
+                        <footer className="text-center">
+                            <p className="text-xs text-muted-foreground">
+                                Powered by Rust • Built with Electron + React
+                            </p>
+                        </footer>
+                    </div>
                 </div>
             </div>
         );
@@ -378,11 +374,13 @@ function HomeLayoutContent() {
     );
 }
 
-// Main export wraps content in EnvironmentProvider
+// Main export wraps content in providers
 export function HomeLayout() {
     return (
         <EnvironmentProvider>
-            <HomeLayoutContent />
+            <TabProvider>
+                <HomeLayoutContent />
+            </TabProvider>
         </EnvironmentProvider>
     );
 }
