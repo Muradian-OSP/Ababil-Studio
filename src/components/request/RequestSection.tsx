@@ -27,7 +27,7 @@ import { HTTP_METHODS } from '../../utils/constants';
 import { getMethodColor } from '../../utils/helpers';
 import { Collection } from '../../types/collection';
 import { Environment } from '../../types/environment';
-import { RequestHeader } from '../../types/http';
+import { RequestHeader, RequestAuth } from '../../types/http';
 import { VariableUrlInput } from './VariableUrlInput';
 import { VariableTextarea } from './VariableTextarea';
 import { HeadersTable } from './HeadersTable';
@@ -41,10 +41,12 @@ interface RequestSectionProps {
     currentRequestName?: string;
     collections: Collection[];
     activeEnvironment?: Environment | null;
+    requestAuth?: RequestAuth;
     onMethodChange: (method: string) => void;
     onUrlChange: (url: string) => void;
     onBodyChange: (body: string) => void;
     onHeadersChange: (headers: RequestHeader[]) => void;
+    onAuthChange?: (auth: RequestAuth | undefined) => void;
     onSend: () => void;
     onKeyDown: (e: React.KeyboardEvent) => void;
     onSave?: (name: string, collectionId?: string) => void;
@@ -60,10 +62,12 @@ export function RequestSection({
     currentRequestName,
     collections,
     activeEnvironment,
+    requestAuth,
     onMethodChange,
     onUrlChange,
     onBodyChange,
     onHeadersChange,
+    onAuthChange,
     onSend,
     onKeyDown,
     onSave,
@@ -195,7 +199,62 @@ export function RequestSection({
                                     <label className="text-sm font-medium">
                                         Auth Type
                                     </label>
-                                    <Select defaultValue="inherit">
+                                    <Select
+                                        value={requestAuth?.type || 'inherit'}
+                                        onValueChange={(value) => {
+                                            if (!onAuthChange) return;
+                                            if (value === 'inherit') {
+                                                onAuthChange(undefined);
+                                            } else if (value === 'noauth') {
+                                                onAuthChange({
+                                                    type: 'noauth',
+                                                });
+                                            } else if (value === 'bearer') {
+                                                onAuthChange({
+                                                    type: 'bearer',
+                                                    bearer: [
+                                                        {
+                                                            key: 'token',
+                                                            value: '',
+                                                            type: 'string',
+                                                        },
+                                                    ],
+                                                });
+                                            } else if (value === 'basic') {
+                                                onAuthChange({
+                                                    type: 'basic',
+                                                    basic: [
+                                                        {
+                                                            key: 'username',
+                                                            value: '',
+                                                            type: 'string',
+                                                        },
+                                                        {
+                                                            key: 'password',
+                                                            value: '',
+                                                            type: 'string',
+                                                        },
+                                                    ],
+                                                });
+                                            } else if (value === 'apikey') {
+                                                onAuthChange({
+                                                    type: 'apikey',
+                                                    apikey: [
+                                                        {
+                                                            key: 'key',
+                                                            value: 'api_key',
+                                                            type: 'string',
+                                                        },
+                                                        {
+                                                            key: 'value',
+                                                            value: '',
+                                                            type: 'string',
+                                                        },
+                                                    ],
+                                                });
+                                            }
+                                        }}
+                                    >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select auth type" />
                                         </SelectTrigger>
@@ -224,18 +283,219 @@ export function RequestSection({
                                     </p>
                                 </div>
                                 <div className="space-y-3">
-                                    <label className="text-sm font-medium">
-                                        Token
-                                    </label>
-                                    <Input
-                                        placeholder="{{user_token}}"
-                                        className="font-mono"
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        Use variables like{' '}
-                                        <code className="bg-muted px-1 rounded">{`{{token_name}}`}</code>{' '}
-                                        to reference extracted tokens.
-                                    </p>
+                                    {/* Bearer Token Input */}
+                                    {requestAuth?.type === 'bearer' && (
+                                        <>
+                                            <label className="text-sm font-medium">
+                                                Token
+                                            </label>
+                                            <Input
+                                                value={
+                                                    requestAuth.bearer?.find(
+                                                        (v) => v.key === 'token'
+                                                    )?.value || ''
+                                                }
+                                                onChange={(e) => {
+                                                    if (!onAuthChange) return;
+                                                    onAuthChange({
+                                                        ...requestAuth,
+                                                        bearer: [
+                                                            {
+                                                                key: 'token',
+                                                                value: e.target
+                                                                    .value,
+                                                                type: 'string',
+                                                            },
+                                                        ],
+                                                    });
+                                                }}
+                                                placeholder="{{user_token}}"
+                                                className="font-mono"
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                Use variables like{' '}
+                                                <code className="bg-muted px-1 rounded">{`{{token_name}}`}</code>{' '}
+                                                to reference extracted tokens.
+                                            </p>
+                                        </>
+                                    )}
+
+                                    {/* Basic Auth Inputs */}
+                                    {requestAuth?.type === 'basic' && (
+                                        <>
+                                            <label className="text-sm font-medium">
+                                                Username
+                                            </label>
+                                            <Input
+                                                value={
+                                                    requestAuth.basic?.find(
+                                                        (v) =>
+                                                            v.key === 'username'
+                                                    )?.value || ''
+                                                }
+                                                onChange={(e) => {
+                                                    if (!onAuthChange) return;
+                                                    const password =
+                                                        requestAuth.basic?.find(
+                                                            (v) =>
+                                                                v.key ===
+                                                                'password'
+                                                        )?.value || '';
+                                                    onAuthChange({
+                                                        ...requestAuth,
+                                                        basic: [
+                                                            {
+                                                                key: 'username',
+                                                                value: e.target
+                                                                    .value,
+                                                                type: 'string',
+                                                            },
+                                                            {
+                                                                key: 'password',
+                                                                value: password,
+                                                                type: 'string',
+                                                            },
+                                                        ],
+                                                    });
+                                                }}
+                                                placeholder="Username"
+                                                className="font-mono"
+                                            />
+                                            <label className="text-sm font-medium mt-2">
+                                                Password
+                                            </label>
+                                            <Input
+                                                type="password"
+                                                value={
+                                                    requestAuth.basic?.find(
+                                                        (v) =>
+                                                            v.key === 'password'
+                                                    )?.value || ''
+                                                }
+                                                onChange={(e) => {
+                                                    if (!onAuthChange) return;
+                                                    const username =
+                                                        requestAuth.basic?.find(
+                                                            (v) =>
+                                                                v.key ===
+                                                                'username'
+                                                        )?.value || '';
+                                                    onAuthChange({
+                                                        ...requestAuth,
+                                                        basic: [
+                                                            {
+                                                                key: 'username',
+                                                                value: username,
+                                                                type: 'string',
+                                                            },
+                                                            {
+                                                                key: 'password',
+                                                                value: e.target
+                                                                    .value,
+                                                                type: 'string',
+                                                            },
+                                                        ],
+                                                    });
+                                                }}
+                                                placeholder="Password"
+                                                className="font-mono"
+                                            />
+                                        </>
+                                    )}
+
+                                    {/* API Key Inputs */}
+                                    {requestAuth?.type === 'apikey' && (
+                                        <>
+                                            <label className="text-sm font-medium">
+                                                Key
+                                            </label>
+                                            <Input
+                                                value={
+                                                    requestAuth.apikey?.find(
+                                                        (v) => v.key === 'key'
+                                                    )?.value || 'api_key'
+                                                }
+                                                onChange={(e) => {
+                                                    if (!onAuthChange) return;
+                                                    const apiValue =
+                                                        requestAuth.apikey?.find(
+                                                            (v) =>
+                                                                v.key ===
+                                                                'value'
+                                                        )?.value || '';
+                                                    onAuthChange({
+                                                        ...requestAuth,
+                                                        apikey: [
+                                                            {
+                                                                key: 'key',
+                                                                value: e.target
+                                                                    .value,
+                                                                type: 'string',
+                                                            },
+                                                            {
+                                                                key: 'value',
+                                                                value: apiValue,
+                                                                type: 'string',
+                                                            },
+                                                        ],
+                                                    });
+                                                }}
+                                                placeholder="api_key"
+                                                className="font-mono"
+                                            />
+                                            <label className="text-sm font-medium mt-2">
+                                                Value
+                                            </label>
+                                            <Input
+                                                value={
+                                                    requestAuth.apikey?.find(
+                                                        (v) => v.key === 'value'
+                                                    )?.value || ''
+                                                }
+                                                onChange={(e) => {
+                                                    if (!onAuthChange) return;
+                                                    const keyName =
+                                                        requestAuth.apikey?.find(
+                                                            (v) =>
+                                                                v.key === 'key'
+                                                        )?.value || 'api_key';
+                                                    onAuthChange({
+                                                        ...requestAuth,
+                                                        apikey: [
+                                                            {
+                                                                key: 'key',
+                                                                value: keyName,
+                                                                type: 'string',
+                                                            },
+                                                            {
+                                                                key: 'value',
+                                                                value: e.target
+                                                                    .value,
+                                                                type: 'string',
+                                                            },
+                                                        ],
+                                                    });
+                                                }}
+                                                placeholder="{{api_key}}"
+                                                className="font-mono"
+                                            />
+                                        </>
+                                    )}
+
+                                    {/* No Auth / Inherit messages */}
+                                    {requestAuth?.type === 'noauth' && (
+                                        <p className="text-sm text-muted-foreground p-4 border border-dashed rounded-md text-center">
+                                            This request does not use any
+                                            authorization.
+                                        </p>
+                                    )}
+
+                                    {!requestAuth?.type && (
+                                        <p className="text-sm text-muted-foreground p-4 border border-dashed rounded-md text-center">
+                                            Authorization will be inherited from
+                                            the parent collection.
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </TabsContent>

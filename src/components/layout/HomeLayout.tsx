@@ -321,10 +321,12 @@ function HomeLayoutContent() {
                         currentRequestName={currentRequestName}
                         collections={collections}
                         activeEnvironment={activeEnvironment}
+                        requestAuth={requestAuth}
                         onMethodChange={setMethod}
                         onUrlChange={setUrl}
                         onBodyChange={setRequestBody}
                         onHeadersChange={setHeaders}
+                        onAuthChange={setRequestAuth}
                         onSend={handleSend}
                         onKeyDown={handleKeyDown}
                         onSave={handleSave}
